@@ -152,7 +152,7 @@ body{font-family:'Inter',sans-serif;background:var(--ink);color:var(--fog);min-h
 /* ── FAB ── */
 .score-fab{position:fixed;bottom:22px;right:18px;z-index:900;width:50px;height:50px;border-radius:50%;border:none;cursor:pointer;background:var(--gold);color:var(--ink);font-size:20px;box-shadow:0 4px 16px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;transition:transform .15s;}
 .score-fab:hover{transform:scale(1.08);}
-.fab-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);}
+.fab-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);}
 .fab-sheet{background:#111a11;border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;animation:slideUp .2s ease-out;}
 @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
 .fab-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.07);}
@@ -1228,7 +1228,7 @@ let fabState = { step:'rounds', ri:null, pid:null };
 
 function openFab(){
   fabState = { step:'rounds', ri:null, pid:null };
-  document.getElementById('fabOverlay').style.display='flex';
+  const fo=document.getElementById('fabOverlay'); fo.style.display='flex'; fo.style.alignItems='flex-end'; fo.style.justifyContent='center';
   renderFab();
 }
 
