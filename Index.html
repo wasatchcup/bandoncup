@@ -755,16 +755,6 @@ function totalPoints(teamId){
 }
 
 // ── LEADERBOARD ──────────────────────────────────────────────
-// indFilter already declared above
-let grossNet = 'gross'; // 'gross' or 'net'
-
-function setGrossNet(mode){
-  grossNet = mode;
-  document.getElementById('gn-gross').classList.toggle('active', mode==='gross');
-  document.getElementById('gn-net').classList.toggle('active', mode==='net');
-  renderIndividualLeaderboard();
-}
-
 function buildStandings(){
   return teams.map(t=>({
     team: t,
