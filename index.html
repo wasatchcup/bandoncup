@@ -357,7 +357,20 @@ const TEAM_COLOR_VARS = ['var(--t1)','var(--t2)','var(--t3)'];
 function ld(k,d){ try{ const v=localStorage.getItem('bc27-'+k); return v?JSON.parse(v):d; }catch(e){ return d; } }
 function sv(k,v){ try{ localStorage.setItem('bc27-'+k,JSON.stringify(v)); }catch(e){} }
 
-let players = ld('players', Array.from({length:12},(_,i)=>({ id:i, name:'Player '+(i+1), handicap:0 })));
+let players = ld('players', [
+  { id:0,  name:'Mitchell Meyer',   handicap:0 },
+  { id:1,  name:'Josh Pehrson',     handicap:0 },
+  { id:2,  name:'Landon Anderson',  handicap:0 },
+  { id:3,  name:'Cooper Atkinson',  handicap:0 },
+  { id:4,  name:'Zac Cottrell',     handicap:0 },
+  { id:5,  name:'Tom Rhodes',       handicap:0 },
+  { id:6,  name:'Ryan Hubrich',     handicap:0 },
+  { id:7,  name:'Jake Pehrson',     handicap:0 },
+  { id:8,  name:'Ian Cahoon',       handicap:0 },
+  { id:9,  name:'Kellan Bumstead',  handicap:0 },
+  { id:10, name:'Palmer Brophy',    handicap:0 },
+  { id:11, name:'Dillon Griffin',   handicap:0 },
+]);
 
 let teams = ld('teams', [
   { id:0, name:'Team 1', color:'t1', players:[0,1,2,3] },
