@@ -152,7 +152,7 @@ body{font-family:'Inter',sans-serif;background:var(--ink);color:var(--fog);min-h
 /* ── FAB ── */
 .score-fab{position:fixed;bottom:22px;right:18px;z-index:900;width:50px;height:50px;border-radius:50%;border:none;cursor:pointer;background:var(--gold);color:var(--ink);font-size:20px;box-shadow:0 4px 16px rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;transition:transform .15s;}
 .score-fab:hover{transform:scale(1.08);}
-.fab-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);align-items:flex-end;justify-content:center;backdrop-filter:blur(3px);}
+.fab-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px);visibility:hidden;pointer-events:none;opacity:0;transition:opacity .2s;}
 .fab-sheet{background:#111a11;border-radius:16px 16px 0 0;width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column;animation:slideUp .2s ease-out;}
 @keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
 .fab-hd{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.07);}
@@ -330,7 +330,7 @@ body{font-family:'Inter',sans-serif;background:var(--ink);color:var(--fog);min-h
 
 <!-- FAB -->
 <button class="score-fab" onclick="openFab()" title="Quick Score Entry">⛳</button>
-<div class="fab-overlay" id="fabOverlay" style="display:none;" onclick="if(event.target===this)closeFab()">
+<div class="fab-overlay" id="fabOverlay" onclick="if(event.target===this)closeFab()">
   <div class="fab-sheet">
     <div class="fab-hd">
       <span class="fab-title" id="fabTitle">Enter Score</span>
@@ -1228,11 +1228,11 @@ let fabState = { step:'rounds', ri:null, pid:null };
 
 function openFab(){
   fabState = { step:'rounds', ri:null, pid:null };
-  const fo=document.getElementById('fabOverlay'); fo.style.display='flex'; fo.style.alignItems='flex-end'; fo.style.justifyContent='center';
+  const fo=document.getElementById('fabOverlay'); fo.style.visibility='visible'; fo.style.pointerEvents='all'; fo.style.opacity='1';
   renderFab();
 }
 
-function closeFab(){ document.getElementById('fabOverlay').style.display='none'; }
+function closeFab(){ const fo=document.getElementById('fabOverlay'); fo.style.visibility='hidden'; fo.style.pointerEvents='none'; fo.style.opacity='0'; }
 
 function renderFab(){
   const title = document.getElementById('fabTitle');
@@ -1432,7 +1432,13 @@ function saveRounds(){
 
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
 
-renderLeaderboard();
+try { renderLeaderboard(); } catch(e) { console.error('Init error:', e); }
+
+// Safety net: kill overlay if somehow visible on load
+window.addEventListener('load', function(){
+  const fo = document.getElementById('fabOverlay');
+  if(fo){ fo.style.visibility='hidden'; fo.style.pointerEvents='none'; fo.style.opacity='0'; }
+});
 </script>
 </body>
 </html>
