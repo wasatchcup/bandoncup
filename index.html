@@ -246,6 +246,12 @@ body{font-family:'Inter',sans-serif;background:var(--ink);color:var(--fog);min-h
 
   <!-- Individual view -->
   <div id="lb-individual-view" style="display:none;">
+    <!-- Gross / Net toggle -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button class="pill active" id="gn-gross" onclick="setGrossNet('gross')">Gross</button>
+      <button class="pill" id="gn-net" onclick="setGrossNet('net')">Net</button>
+    </div>
+    <!-- Round filter -->
     <div class="pills">
       <button class="pill active" data-ri="all" onclick="setIndFilter('all')">All Rounds</button>
       <button class="pill" data-ri="0" onclick="setIndFilter(0)">R1 · Trails</button>
@@ -260,6 +266,9 @@ body{font-family:'Inter',sans-serif;background:var(--ink);color:var(--fog);min-h
         <thead id="ind-thead"></thead>
         <tbody id="lb-ind-body"></tbody>
       </table>
+    </div>
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:10px;">
+      * Net uses course stroke indices &amp; player handicap
     </div>
   </div>
 </div>
@@ -537,11 +546,229 @@ function totalPoints(teamId){
 }
 
 // ── LEADERBOARD ──────────────────────────────────────────────
-let indFilter = 'all'; // 'all' or round index 0-6
+let indFilter = 'all';
+let grossNet = 'gross'; // 'gross' or 'net'
+
+function setGrossNet(mode){
+  grossNet = mode;
+  document.getElementById('gn-gross').classList.toggle('active', mode==='gross');
+  document.getElementById('gn-net').classList.toggle('active', mode==='net');
+  renderIndividualLeaderboard();
+}
 
 function setIndFilter(ri){
   indFilter = ri;
-  document.querySelectorAll('.rd-pill').forEach(p=>{
+  // update round pills (not the gross/net pills)
+  document.querySelectorAll('[data-ri]').forEach(p=>{
+    p.classList.toggle('active', String(p.dataset.ri) === String(ri));
+  });
+  renderIndividualLeaderboard();
+}
+
+function switchLbTab(tab){
+  document.querySelectorAll('.lb-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('lbt-'+tab).classList.add('active');
+  document.getElementById('lb-team-view').style.display = tab==='team'?'block':'none';
+  document.getElementById('lb-individual-view').style.display = tab==='individual'?'block':'none';
+  if(tab==='individual') renderIndividualLeaderboard();
+}
+
+function playerNetTotal(pid){
+  let total=0, rounds=0;
+  COURSES.forEach((_,ri)=>{
+    const sc=scores[ri]?.[pid];
+    if(!sc) return;
+    let net=0,any=false;
+    sc.forEach((v,h)=>{ if(v){ net+=netScore(v,phdcp(pid),h,ri); any=true; } });
+    if(any){ total+=net; rounds++; }
+  });
+  return rounds>0?{total,rounds}:null;
+}
+
+function playerRoundNet(pid, ri){
+  const sc=scores[ri]?.[pid];
+  if(!sc) return null;
+  let net=0, any=false;
+  sc.forEach((v,h)=>{ if(v){ net+=netScore(v,phdcp(pid),h,ri); any=true; } });
+  return any?net:null;
+}
+
+function renderIndividualLeaderboard(){
+  const isSingle = indFilter !== 'all';
+  const ri = isSingle ? indFilter : null;
+  const isNet = grossNet === 'net';
+
+  const allPlayers = players.map((p,id)=>{
+    const t = teams.find(t=>t.players.includes(id));
+    const roundDetails = COURSES.map((_,rIdx)=>playerRoundDetail(id,rIdx));
+
+    // Gross per round
+    const roundGross = COURSES.map((_,rIdx)=>{
+      const sc = scores[rIdx]?.[id];
+      if(!sc) return null;
+      const total = sc.filter(Boolean).reduce((a,v)=>a+v,0);
+      const thru  = sc.reduce((mx,v,h)=>v!=null?h+1:mx, 0);
+      return total ? {total, thru, holes:COURSES[rIdx].holes} : null;
+    });
+
+    let res, scoreDets, grossDets;
+    if(isSingle){
+      const det   = roundDetails[ri];
+      const gdet  = roundGross[ri];
+      scoreDets   = [det];
+      grossDets   = [gdet];
+      if(isNet){
+        res = det ? {total:det.net, totalPar:det.parPlayed} : null;
+      } else {
+        res = gdet ? {total:gdet.total, totalPar:COURSES[ri].par} : null;
+      }
+    } else {
+      scoreDets = roundDetails;
+      grossDets = roundGross;
+      if(isNet){
+        const pd = roundDetails.filter(d=>d);
+        const tn = pd.reduce((a,d)=>a+d.net,0);
+        const tp = pd.reduce((a,d)=>a+d.parPlayed,0);
+        res = pd.length ? {total:tn, totalPar:tp} : null;
+      } else {
+        const gd = roundGross.filter(d=>d);
+        const tn = gd.reduce((a,d)=>a+d.total,0);
+        const tp = roundGross.reduce((acc,g,rIdx)=>g?acc+COURSES[rIdx].par:acc,0);
+        res = gd.length ? {total:tn, totalPar:tp} : null;
+      }
+    }
+    return { id, name:p.name, hdcp:p.handicap, team:t, res, roundDetails, roundGross };
+  });
+
+  const played   = allPlayers.filter(p=>p.res);
+  played.sort((a,b)=>(a.res.total-a.res.totalPar)-(b.res.total-b.res.totalPar));
+  const unplayed = allPlayers.filter(p=>!p.res);
+  const sorted   = [...played, ...unplayed];
+
+  // thead
+  let theadHtml;
+  if(isSingle){
+    theadHtml = `<tr>
+      <th class="l" style="width:36px;">#</th>
+      <th class="l">Player</th>
+      <th class="l">Team</th>
+      <th>Hdcp</th>
+      <th>${COURSES[ri].name}</th>
+      <th>Thru</th>
+      <th>${isNet?'Net':'Gross'}</th>
+      <th>+/-</th>
+    </tr>`;
+  } else {
+    const rCols = COURSES.map((_,i)=>`<th>R${i+1}</th>`).join('');
+    theadHtml = `<tr>
+      <th class="l" style="width:36px;">#</th>
+      <th class="l">Player</th>
+      <th class="l">Team</th>
+      <th>Hdcp</th>
+      <th>Total</th>
+      <th>+/-</th>
+      ${rCols}
+    </tr>`;
+  }
+  document.getElementById('ind-thead').innerHTML = theadHtml;
+
+  const rows = sorted.map((p,i)=>{
+    const rank   = p.res ? i+1 : '—';
+    const cv     = p.team ? TEAM_COLOR_VARS[p.team.id] : 'var(--muted)';
+    const tname  = p.team ? p.team.name : '—';
+    const diff   = p.res ? p.res.total - p.res.totalPar : null;
+    const dStr   = diff===null?'—':diff<0?String(diff):diff>0?'+'+diff:'E';
+    const dColor = diff===null?'#334433':diff<0?'#5aaa6a':diff>0?'#c06060':'var(--muted)';
+    const rankColor = i===0?'color:var(--gold)':i===1?'color:#c0c0c0':i===2?'color:#cd7f32':'color:var(--fog)';
+
+    let middleCells;
+    if(isSingle){
+      const det  = p.roundDetails[ri];
+      const gdet = p.roundGross[ri];
+      const val  = isNet ? det?.net : gdet?.total;
+      const thru = isNet ? det?.thru : gdet?.thru;
+      const hl   = isNet ? det?.holes : gdet?.holes;
+      const thruStr = thru ? (thru===hl?'F':thru) : '—';
+      middleCells = `
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--fog);text-align:center;">${val??'—'}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);text-align:center;">${thruStr}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--fog);text-align:center;">${val??'—'}</td>
+        <td style="text-align:center;"><span style="font-size:16px;font-weight:700;color:${dColor}">${dStr}</span></td>`;
+    } else {
+      const totalCell = `<td style="text-align:center;">
+        <div style="font-size:17px;font-weight:700;color:${dColor};line-height:1;">${dStr}</div>
+        ${p.res?`<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px;">${p.res.total}</div>`:''}
+      </td>`;
+      // diff cell separate
+      const diffCell = `<td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:${dColor};text-align:center;">${dStr}</td>`;
+
+      const rdCells = COURSES.map((_,rIdx)=>{
+        const det  = p.roundDetails[rIdx];
+        const gdet = p.roundGross[rIdx];
+        const val  = isNet ? det?.net : gdet?.total;
+        const par  = isNet
+          ? (det?.parPlayed ?? null)
+          : COURSES[rIdx].par;
+        if(val==null) return `<td style="color:#334433;text-align:center;">—</td>`;
+        const d  = val - par;
+        const dc = d<0?'#5aaa6a':d>0?'#c06060':'var(--muted)';
+        return `<td style="text-align:center;">
+          <div style="font-size:13px;font-weight:600;color:${dc}">${d<0?d:d>0?'+'+d:'E'}</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)">${val}</div>
+        </td>`;
+      }).join('');
+
+      middleCells = totalCell + rdCells;
+    }
+
+    return `<tr>
+      <td style="text-align:center;"><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;${rankColor}">${rank}</span></td>
+      <td class="l" style="font-weight:600;color:var(--fog);font-size:14px;">${p.name}</td>
+      <td class="l" style="font-size:12px;color:${cv}">${tname}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);text-align:center;">${p.hdcp||0}</td>
+      ${middleCells}
+    </tr>`;
+  }).join('');
+
+  document.getElementById('lb-ind-body').innerHTML = rows;
+}
+
+
+function playerRoundDetail(pid, roundIdx){
+  const c = COURSES[roundIdx];
+  const sc = scores[roundIdx]?.[pid]; if(!sc) return null;
+  let net=0, parPlayed=0, thru=0, any=false;
+  sc.forEach((v,h)=>{
+    if(v==null) return;
+    net += netScore(v, phdcp(pid), h, roundIdx);
+    parPlayed += c.holePar ? c.holePar[h] : 4;
+    thru = h+1;
+    any = true;
+  });
+  return any ? {net, parPlayed, thru, holes:c.holes} : null;
+}
+
+function totalPoints(teamId){
+  let pts=0;
+  rounds.forEach((r,ri)=>{ pts += r.points[teamId]||0; });
+  return pts;
+}
+
+// ── LEADERBOARD ──────────────────────────────────────────────
+let indFilter = 'all';
+let grossNet = 'gross'; // 'gross' or 'net'
+
+function setGrossNet(mode){
+  grossNet = mode;
+  document.getElementById('gn-gross').classList.toggle('active', mode==='gross');
+  document.getElementById('gn-net').classList.toggle('active', mode==='net');
+  renderIndividualLeaderboard();
+}
+
+function setIndFilter(ri){
+  indFilter = ri;
+  // update round pills (not the gross/net pills)
+  document.querySelectorAll('[data-ri]').forEach(p=>{
     p.classList.toggle('active', String(p.dataset.ri) === String(ri));
   });
   renderIndividualLeaderboard();
