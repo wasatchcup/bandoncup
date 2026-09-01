@@ -602,7 +602,6 @@ body{font-family:'Inter',sans-serif;background:var(--black);color:var(--white);m
 <div class="toast" id="toast"></div>
 
 <script>
-document.addEventListener("DOMContentLoaded", function(){
 
 // ── COURSES ──────────────────────────────────────────────────
 const COURSES = [
@@ -1629,13 +1628,13 @@ function saveRounds(){
 
 function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
 
-try { renderLeaderboard(); } catch(e) { console.error('Init error:', e); }
+document.addEventListener('DOMContentLoaded', function(){
+  try { renderLeaderboard(); } catch(e) { console.error('Init error:', e); }
+  const fo2 = document.getElementById('fabOverlay');
+  if(fo2){ fo2.style.visibility='hidden'; fo2.style.pointerEvents='none'; fo2.style.opacity='0'; }
+});
 
-// Safety net
-const fo2 = document.getElementById('fabOverlay');
-if(fo2){ fo2.style.visibility='hidden'; fo2.style.pointerEvents='none'; fo2.style.opacity='0'; }
 
-}); // end DOMContentLoaded
 </script>
 </body>
 </html>
