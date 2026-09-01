@@ -1518,17 +1518,18 @@ function renderSetup(){
 
   // Teams
   const allOpts = players.map((p,i)=>`<option value="${i}">${p.name}</option>`).join('');
-  document.getElementById('team-setup').innerHTML = teams.map((t,ti)=>`
-    <div class="card" style="border-color:${TEAM_COLOR_VARS[ti]}40;">
+  document.getElementById('team-setup').innerHTML = teams.map((t,ti)=>{
+    const playerSelects = [0,1,2,3].map(pi=>{
+      const curPid = t.players[pi] ?? pi;
+      const opts = players.map((p,i)=>`<option value="${i}" ${i===curPid?'selected':''}>${p.name}</option>`).join('');
+      return `<label class="fl">Player ${pi+1}</label><select class="fc" id="tp${ti}-${pi}">${opts}</select>`;
+    }).join('');
+    return `<div class="card" style="border-color:${TEAM_COLOR_VARS[ti]}40;">
       <label class="fl">Team ${ti+1} Name</label>
       <input class="fc" id="tn${ti}" value="${t.name}">
-      ${[0,1,2,3].map(pi=>`
-        <label class="fl">Player ${pi+1}</label>
-        <select class="fc" id="tp${ti}-${pi}">${allOpts}</select>`).join('')}
-    </div>`).join('');
-  teams.forEach((t,ti)=>{
-    t.players.forEach((pid,pi)=>{ const el=document.getElementById(`tp${ti}-${pi}`); if(el) el.value=pid; });
-  });
+      ${playerSelects}
+    </div>`;
+  }).join('');
 
   // Rounds
   const allPlayerOpts = players.map((p,i)=>`<option value="${i}">${p.name}</option>`).join('');
@@ -1597,8 +1598,12 @@ function savePlayers(){
 
 function saveTeams(){
   teams = teams.map((t,ti)=>({...t,
-    name: document.getElementById(`tn${ti}`)?.value||t.name,
-    players: [0,1,2,3].map(pi=>parseInt(document.getElementById(`tp${ti}-${pi}`)?.value)||0)
+    name: document.getElementById('tn'+ti)?.value||t.name,
+    players: [0,1,2,3].map(pi=>{
+      const el = document.getElementById('tp'+ti+'-'+pi);
+      const v = el ? parseInt(el.value) : NaN;
+      return isNaN(v) ? t.players[pi] : v;
+    })
   }));
   sv('teams',teams); showToast('Teams saved');
 }
