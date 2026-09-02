@@ -403,6 +403,7 @@ body{font-family:'Inter',sans-serif;background:var(--black);color:var(--white);m
   <div class="nav-tab" data-page="teams">Teams</div>
   <div class="nav-tab" data-page="schedule">Schedule</div>
   <div class="nav-tab" data-page="scores">Scores</div>
+  <div class="nav-tab" data-page="skins">Skins</div>
   <div class="nav-tab" data-page="money">Money</div>
   <div class="nav-tab" data-page="setup">Setup</div>
 </nav>
@@ -486,6 +487,39 @@ body{font-family:'Inter',sans-serif;background:var(--black);color:var(--white);m
     </select>
   </div>
   <div id="score-table-wrap"></div>
+</div>
+
+<!-- SKINS -->
+<div id="page-skins" class="page">
+  <div class="pg-title">Skins</div>
+  <div class="pg-sub">Individual Net Skins · No Carryover · Ties Lose</div>
+
+  <!-- Round selector -->
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:24px;" id="skins-pills">
+    <button class="pill active" onclick="showSkinRound(0)">R1 · Trails</button>
+    <button class="pill" onclick="showSkinRound(1)">R2 · Old Mac</button>
+    <button class="pill" onclick="showSkinRound(2)">R3 · Sheep</button>
+    <button class="pill" onclick="showSkinRound(3)">R4 · Pac Dunes</button>
+    <button class="pill" onclick="showSkinRound(4)">R5 · B.Dunes</button>
+    <button class="pill" onclick="showSkinRound(5)">R6 · B.Dunes</button>
+  </div>
+
+  <div id="skins-round-display"></div>
+
+  <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin:28px 0 12px;">Trip Skins Leaderboard</div>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr>
+        <th>#</th>
+        <th class="l">Player</th>
+        <th class="l">Team</th>
+        <th>Skins</th>
+        <th>R1</th><th>R2</th><th>R3</th><th>R4</th><th>R5</th><th>R6</th>
+        <th>Earnings</th>
+      </tr></thead>
+      <tbody id="skins-trip-body"></tbody>
+    </table>
+  </div>
 </div>
 
 <!-- MONEY -->
@@ -673,8 +707,8 @@ const DEFAULT_TEE_TIMES = [
 let rounds = ld('rounds', COURSES.map((_,ri)=>({
   format:'tbb',
   points:{ 0:0, 1:0, 2:0 },
+  skinsPot: 60, // default $60 per round
   teeGroups: DEFAULT_TEE_TIMES[ri],
-  // 6 pairs total: 2 pairs per team (3 teams × 2 pairs = 6 pairs)
   pairs:{ 0:[[0,1],[2,3]], 1:[[4,5],[6,7]], 2:[[8,9],[10,11]] }
 })));
 
@@ -705,6 +739,7 @@ document.querySelectorAll('.nav-tab').forEach(tab=>{
     if(pg==='teams') renderTeams();
     if(pg==='schedule') renderSchedule();
     if(pg==='scores') initScoreEntry();
+    if(pg==='skins') renderSkinsPage();
     if(pg==='money') renderMoneyPage();
     if(pg==='setup') renderSetup();
   });
@@ -1010,6 +1045,65 @@ function renderIndividualLeaderboard(){
 
 
 
+
+// ── SKINS ─────────────────────────────────────────────────────
+// Returns array of {hole, winner:[pids], net} or {hole, tied:true}
+function calcSkins(roundIdx){
+  const c = COURSES[roundIdx];
+  const rd = scores[roundIdx] || {};
+  const results = [];
+
+  for(let h = 0; h < c.holes; h++){
+    let best = null;
+    let winners = [];
+
+    players.forEach((_,pid)=>{
+      const sc = rd[pid];
+      if(!sc || sc[h] == null) return;
+      const net = netScore(sc[h], phdcp(pid), h, roundIdx);
+      if(best === null || net < best){
+        best = net; winners = [pid];
+      } else if(net === best){
+        winners.push(pid);
+      }
+    });
+
+    if(winners.length === 0) continue; // no scores yet
+    if(winners.length === 1){
+      results.push({ hole:h+1, winner:winners[0], net:best, tied:false });
+    } else {
+      results.push({ hole:h+1, tied:true, net:best, tiedPlayers:winners });
+    }
+  }
+  return results;
+}
+
+// Returns {pid: skinCount} for a round
+function skinCounts(roundIdx){
+  const skins = calcSkins(roundIdx);
+  const counts = {};
+  skins.forEach(s=>{ if(!s.tied){ counts[s.winner] = (counts[s.winner]||0)+1; } });
+  return counts;
+}
+
+// Returns {pid: dollarAmount} for a round
+function skinsPayouts(roundIdx){
+  const pot = rounds[roundIdx]?.skinsPot || 0;
+  const counts = skinCounts(roundIdx);
+  const totalSkins = Object.values(counts).reduce((a,v)=>a+v,0);
+  if(!totalSkins) return {};
+  const perSkin = pot / totalSkins;
+  const payouts = {};
+  Object.entries(counts).forEach(([pid,cnt])=>{ payouts[pid] = +(cnt * perSkin).toFixed(2); });
+  return payouts;
+}
+
+// Trip total skins earnings per player
+function totalSkinsEarnings(pid){
+  let total = 0;
+  COURSES.forEach((_,ri)=>{ total += skinsPayouts(ri)[pid] || 0; });
+  return total;
+}
 
 function buildStandings(){
   return teams.map(t=>({
@@ -1410,6 +1504,137 @@ function countBirdies(pid){
     sc.forEach((v,h)=>{ if(v&&c.holePar&&v<c.holePar[h]) n++; });
   });
   return n;
+}
+
+let activeSkinRound = 0;
+
+function showSkinRound(ri){
+  activeSkinRound = ri;
+  document.querySelectorAll('#skins-pills .pill').forEach((p,i)=>p.classList.toggle('active', i===ri));
+  renderSkinsRound(ri);
+}
+
+function renderSkinsRound(ri){
+  const c = COURSES[ri];
+  const pot = rounds[ri]?.skinsPot || 0;
+  const skins = calcSkins(ri);
+  const counts = skinCounts(ri);
+  const payouts = skinsPayouts(ri);
+  const totalSkins = Object.values(counts).reduce((a,v)=>a+v,0);
+  const perSkin = totalSkins ? +(pot/totalSkins).toFixed(2) : 0;
+
+  // Pot info bar
+  let html = `<div style="display:flex;align-items:center;gap:20px;padding:14px 18px;background:var(--card2);border:1px solid var(--border);border-radius:8px;margin-bottom:16px;flex-wrap:wrap;">
+    <div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Round Pot</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:#3dba6e;" id="sk-pot-${ri}">$${pot}</span>
+        <input type="number" value="${pot}" min="0" max="500" step="5"
+          style="width:70px;background:var(--dark);border:1px solid var(--border);color:var(--blue-light);font-family:'IBM Plex Mono',monospace;font-size:13px;padding:4px 8px;border-radius:3px;outline:none;"
+          onchange="updateSkinPot(${ri}, this.value)">
+      </div>
+    </div>
+    <div style="border-left:1px solid var(--border);padding-left:20px;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Skins Won</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--blue-light);">${totalSkins} <span style="font-size:14px;color:var(--muted);">/ ${c.holes}</span></div>
+    </div>
+    <div style="border-left:1px solid var(--border);padding-left:20px;">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Per Skin</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold);">$${perSkin}</div>
+    </div>
+  </div>`;
+
+  // Hole by hole table
+  html += `<div class="tbl-wrap" style="margin-bottom:24px;"><table class="tbl">
+    <thead><tr>
+      <th>Hole</th>
+      <th class="l">Winner</th>
+      <th>Net</th>
+      <th>Status</th>
+    </tr></thead>
+    <tbody>`;
+
+  if(skins.length === 0){
+    html += `<tr><td colspan="4" style="color:var(--muted);padding:20px;text-align:center;">No scores entered yet</td></tr>`;
+  } else {
+    skins.forEach(s=>{
+      if(s.tied){
+        html += `<tr>
+          <td style="font-family:'IBM Plex Mono',monospace;color:var(--muted);">H${s.hole}</td>
+          <td class="l" style="color:var(--muted);">${s.tiedPlayers.map(pid=>pname(pid)).join(' · ')}</td>
+          <td>${s.net}</td>
+          <td><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:rgba(224,92,92,0.1);color:#e05c5c;border:1px solid rgba(224,92,92,0.2);padding:2px 8px;border-radius:3px;">TIED · NO SKIN</span></td>
+        </tr>`;
+      } else {
+        const t = teams.find(t=>t.players.includes(s.winner));
+        const cv = t ? TEAM_COLOR_VARS[t.id] : 'var(--white)';
+        html += `<tr>
+          <td style="font-family:'IBM Plex Mono',monospace;color:var(--muted);">H${s.hole}</td>
+          <td class="l" style="font-weight:600;color:${cv};">${pname(s.winner)}</td>
+          <td style="color:var(--white);">${s.net}</td>
+          <td><span style="font-family:'IBM Plex Mono',monospace;font-size:9px;background:rgba(61,186,110,0.1);color:#3dba6e;border:1px solid rgba(61,186,110,0.2);padding:2px 8px;border-radius:3px;">SKIN 🏌️</span></td>
+        </tr>`;
+      }
+    });
+  }
+  html += `</tbody></table></div>`;
+
+  // Winners summary
+  if(totalSkins > 0){
+    html += `<div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Round Winners</div>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px;">`;
+    Object.entries(counts).sort((a,b)=>b[1]-a[1]).forEach(([pid,cnt])=>{
+      const t = teams.find(t=>t.players.includes(+pid));
+      const cv = t ? TEAM_COLOR_VARS[t.id] : 'var(--white)';
+      html += `<div style="background:var(--card2);border:1px solid var(--border);border-radius:6px;padding:12px 16px;min-width:140px;">
+        <div style="font-weight:600;color:${cv};font-size:14px;">${pname(+pid)}</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:#3dba6e;margin-top:2px;">${cnt} skin${cnt>1?'s':''}</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--gold);">$${payouts[pid]||0}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  document.getElementById('skins-round-display').innerHTML = html;
+  renderSkinsTripBoard();
+}
+
+function updateSkinPot(ri, val){
+  if(!rounds[ri]) return;
+  rounds[ri].skinsPot = parseFloat(val)||0;
+  sv('rounds', rounds);
+  renderSkinsRound(ri);
+  renderSkinsTripBoard();
+}
+
+function renderSkinsTripBoard(){
+  const rows = players.map((p,pid)=>{
+    const t = teams.find(t=>t.players.includes(pid));
+    const cv = t ? TEAM_COLOR_VARS[t.id] : 'var(--white)';
+    const rdSkins = COURSES.map((_,ri)=>skinCounts(ri)[pid]||0);
+    const total = rdSkins.reduce((a,v)=>a+v,0);
+    const earnings = +totalSkinsEarnings(pid).toFixed(2);
+    return { pid, name:p.name, cv, rdSkins, total, earnings };
+  }).filter(p=>p.total>0).sort((a,b)=>b.total-a.total);
+
+  if(!rows.length){
+    document.getElementById('skins-trip-body').innerHTML =
+      `<tr><td colspan="11" style="color:var(--muted);padding:20px;text-align:center;">No skins yet</td></tr>`;
+    return;
+  }
+
+  document.getElementById('skins-trip-body').innerHTML = rows.map((p,i)=>`<tr>
+    <td><span class="rank-badge ${i<3?'rank-'+(i+1):''}">${i+1}</span></td>
+    <td class="l" style="font-weight:600;color:${p.cv}">${p.name}</td>
+    <td class="l" style="font-size:12px;color:${p.cv}">${teams.find(t=>t.players.includes(p.pid))?.name||'—'}</td>
+    <td style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--blue-light);">${p.total}</td>
+    ${p.rdSkins.map(s=>`<td style="color:${s>0?'#3dba6e':'var(--muted)'};">${s||'—'}</td>`).join('')}
+    <td style="color:var(--gold);font-weight:700;">$${p.earnings}</td>
+  </tr>`).join('');
+}
+
+function renderSkinsPage(){
+  showSkinRound(activeSkinRound);
 }
 
 function renderMoneyPage(){
