@@ -1715,7 +1715,8 @@ function openCTP(ri,holeNum){
     <select class="fc" id="ctp-pid">${opts}</select>
     <label class="fl">Distance (ft) — optional</label>
     <input class="fc" type="number" id="ctp-dist" value="${cur?.dist||''}" placeholder="e.g. 8">
-    <button class="fab-save" onclick="saveCTP(${ri},${holeNum})">Save CTP</button>`;
+    <button class="fab-save" onclick="saveCTP(${ri},${holeNum})">Save CTP</button>
+    <button onclick="clearCTP(${ri},${holeNum})" style="width:100%;margin-top:8px;padding:12px;font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;background:transparent;border:1px solid rgba(224,92,92,0.4);color:#e05c5c;border-radius:8px;cursor:pointer;">Clear Winner</button>`;
   const fo=document.getElementById('fabOverlay');
   fo.style.visibility='visible'; fo.style.pointerEvents='all'; fo.style.opacity='1';
 }
@@ -1728,6 +1729,14 @@ function saveCTP(ri,holeNum){
   closeFab();
   renderMoneyPage();
   showToast('CTP saved — '+pname(pid));
+}
+
+function clearCTP(ri,holeNum){
+  delete ctpWinners[`${ri}_${holeNum}`];
+  sv('ctp',ctpWinners);
+  closeFab();
+  renderMoneyPage();
+  showToast('CTP cleared');
 }
 
 // ── SETUP ────────────────────────────────────────────────────
