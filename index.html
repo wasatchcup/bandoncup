@@ -541,10 +541,11 @@ body{font-family:'Inter',sans-serif;background:var(--black);color:var(--white);m
       <thead><tr>
         <th>#</th>
         <th class="l">Team</th>
-        <th>Net Total</th>
         <th>+/-</th>
+        <th>Net Total</th>
         <th>Rounds</th>
-        <th>Trip Payout</th>
+        <th>Payout</th>
+        <th>Per Player</th>
       </tr></thead>
       <tbody id="trip-money-body"></tbody>
     </table>
@@ -579,21 +580,12 @@ body{font-family:'Inter',sans-serif;background:var(--black);color:var(--white);m
     </table>
   </div>
 
-  <!-- Total Pot Breakdown -->
+  <!-- Pot Breakdown -->
   <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Pot Breakdown</div>
   <div class="tbl-wrap">
     <table class="tbl">
       <thead><tr><th class="l">Category</th><th class="l">Details</th><th>Amount</th></tr></thead>
-      <tbody>
-        <tr><td class="l" style="color:var(--white);">Team — 1st Place</td><td class="l" style="color:var(--muted);">End of trip</td><td style="color:#3dba6e;font-weight:700;">$400</td></tr>
-        <tr><td class="l" style="color:var(--white);">Team — 2nd Place</td><td class="l" style="color:var(--muted);">End of trip</td><td style="color:#3dba6e;">$150</td></tr>
-        <tr><td class="l" style="color:var(--white);">Team — 3rd Place</td><td class="l" style="color:var(--muted);">End of trip</td><td style="color:#3dba6e;">$50</td></tr>
-        <tr><td class="l" style="color:var(--white);">Daily Round Winner</td><td class="l" style="color:var(--muted);">$20 × 6 rounds</td><td style="color:var(--blue-light);">$120</td></tr>
-        <tr><td class="l" style="color:var(--white);">Low Net Individual — Trip</td><td class="l" style="color:var(--muted);">Best net over 6 rounds</td><td style="color:var(--blue-light);">$150</td></tr>
-        <tr><td class="l" style="color:var(--white);">Low Net Individual — Round</td><td class="l" style="color:var(--muted);">Best single round net</td><td style="color:var(--blue-light);">$170</td></tr>
-        <tr><td class="l" style="color:var(--white);">Closest to the Pin</td><td class="l" style="color:var(--muted);">$20 × 8 par 3 holes</td><td style="color:var(--gold);">$160</td></tr>
-        <tr style="border-top:1px solid var(--blue);"><td class="l" style="color:var(--white);font-weight:700;">Total Pot</td><td class="l"></td><td style="color:var(--white);font-size:16px;font-weight:700;">$1,200</td></tr>
-      </tbody>
+      <tbody id="pot-breakdown-body"></tbody>
     </table>
   </div>
 </div>
@@ -641,8 +633,8 @@ body{font-family:'Inter',sans-serif;background:var(--black);color:var(--white);m
 const COURSES = [
   { name:'Bandon Trails',  holes:18, par:71,  hdcp:[13,17,3,5,15,9,7,11,1,10,4,18,12,14,8,2,16,6],
     holePar:[4,3,5,4,3,4,4,4,5,4,4,3,4,4,4,5,3,4] },
-  { name:'Old Macdonald',  holes:18, par:71,  hdcp:[5,11,15,3,13,1,7,17,9,8,6,14,2,16,10,18,12,4],
-    holePar:[4,4,3,4,5,4,3,4,4,4,4,5,4,3,5,3,4,4] },
+  { name:'Old Macdonald',  holes:18, par:71,  hdcp:[11,15,9,1,17,3,7,13,5,10,4,16,18,14,12,2,6,8],
+    holePar:[4,3,4,4,3,5,4,3,4,4,4,3,4,4,5,4,5,4] },
   { name:'Sheep Ranch',    holes:18, par:72,  hdcp:[5,13,17,3,11,1,15,7,9,6,4,2,10,8,14,16,12,18],
     holePar:[5,4,3,4,3,4,3,4,4,4,5,4,5,4,4,3,4,5] },
   { name:'Pacific Dunes',  holes:18, par:71,  hdcp:[9,11,7,3,17,13,1,5,15,14,18,6,2,16,10,12,8,4],
@@ -707,7 +699,7 @@ const DEFAULT_TEE_TIMES = [
 let rounds = ld('rounds', COURSES.map((_,ri)=>({
   format:'tbb',
   points:{ 0:0, 1:0, 2:0 },
-  skinsPot: 60, // default $60 per round
+  skinsPot: 65,
   teeGroups: DEFAULT_TEE_TIMES[ri],
   pairs:{ 0:[[0,1],[2,3]], 1:[[4,5],[6,7]], 2:[[8,9],[10,11]] }
 })));
@@ -1277,9 +1269,11 @@ function renderScoreTable(){
   // Header holes
   const hCols = Array.from({length:c.holes},(_,h)=>`<th>H${h+1}</th>`).join('');
   const parCols = Array.from({length:c.holes},(_,h)=>`<td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);padding:4px 2px;background:#0a120a;">${c.holePar?c.holePar[h]:4}</td>`).join('');
+  const hdcpCols = Array.from({length:c.holes},(_,h)=>`<td style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:rgba(42,127,220,0.6);padding:4px 2px;background:#080f18;">${c.hdcp?c.hdcp[h]:h+1}</td>`).join('');
 
-  // Par row
-  const parRow = `<tr><th style="color:var(--muted);font-weight:400;font-size:11px;">Par</th>${parCols}<td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);background:#0a120a;">${c.par}</td><td style="background:#0a120a;"></td></tr>`;
+  // Par row + Handicap row
+  const parRow = `<tr><th style="color:var(--muted);font-weight:400;font-size:11px;">Par</th>${parCols}<td style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);background:#0a120a;">${c.par}</td><td style="background:#0a120a;"></td></tr>
+  <tr><th style="color:rgba(42,127,220,0.6);font-weight:400;font-size:11px;">HCP</th>${hdcpCols}<td style="background:#080f18;"></td><td style="background:#080f18;"></td></tr>`;
 
   // Player rows
   let rows = parRow;
@@ -1491,10 +1485,10 @@ function fabSave(){
 // ── MONEY & CTP ──────────────────────────────────────────────
 const CTP_HOLES = {
   0:[2,7], 1:[4,14], 2:[3,16], 3:[5,11], 4:[6,12], 5:[6,12]
-};
+}; // 2 par 3s per round × 6 rounds
 let ctpWinners = ld('ctp',{});
-const TRIP_PAYOUTS=[400,150,50];
-const ROUND_PAYOUT=20, IND_TRIP_PAYOUT=150, IND_ROUND_PAYOUT=100, CTP_PAYOUT=20, BIRDIE_PAYOUT=70;
+const TRIP_PAYOUTS=[150,0,0];
+const ROUND_PAYOUT=80, CTP_PAYOUT=15, SKINS_POT=65;
 
 function countBirdies(pid){
   let n=0;
@@ -1638,72 +1632,96 @@ function renderSkinsPage(){
 }
 
 function renderMoneyPage(){
-  // Summary cards
-  const ctpCount=Object.values(CTP_HOLES).reduce((a,v)=>a+v.length,0);
-  document.getElementById('money-summary').innerHTML=[
-    {label:'Total Pot',val:'$1,200',sub:'12 players × $100',color:'var(--white)'},
-    {label:'Team Payouts',val:'$600',sub:'1st $400 · 2nd $150 · 3rd $50',color:'#3dba6e'},
-    {label:'Daily Rounds',val:'$'+(ROUND_PAYOUT*COURSES.length),sub:'$'+ROUND_PAYOUT+' × '+COURSES.length+' rounds',color:'var(--blue-light)'},
-    {label:'Individual',val:'$320',sub:'Low net trip + round',color:'var(--blue-light)'},
-    {label:'CTP',val:'$'+(CTP_PAYOUT*ctpCount),sub:'$'+CTP_PAYOUT+' × '+ctpCount+' holes',color:'var(--gold)'},
-    
-  ].map(c=>`<div class="tc" style="border-top:3px solid ${c.color};"><div class="tc-label" style="color:${c.color}">${c.label}</div><div class="tc-score" style="color:${c.color};font-size:34px;">${c.val}</div><div class="tc-detail">${c.sub}</div></div>`).join('');
+  const ctpCount = Object.values(CTP_HOLES).reduce((a,v)=>a+v.length,0);
 
-  // Round payouts
-  document.getElementById('round-payouts').innerHTML=COURSES.map((c,ri)=>{
-    const dets=teams.map((t,ti)=>({team:t,ti,det:roundScoreDetail(ti,ri)}));
-    const played=dets.filter(d=>d.det);
-    if(!played.length) return `<div style="padding:11px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--card2);color:var(--muted);padding:2px 7px;border-radius:3px;">R${ri+1}</span><span style="font-size:14px;color:var(--white);">${c.name}</span><span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);">Not played yet</span></div>`;
+  // ── Summary Cards ──
+  document.getElementById('money-summary').innerHTML = [
+    { label:'Total Pot',             val:'$1,200', sub:'12 players × $100',          color:'var(--white)' },
+    { label:'Skins',                 val:'$390',   sub:'$65/round × 6 rounds',        color:'var(--blue-light)' },
+    { label:'Closest to Pin',        val:'$180',   sub:'$15 × 2 par 3s × 6 rounds',   color:'var(--gold)' },
+    { label:'Daily Round Winner',    val:'$480',   sub:'$80/round × 6 rounds',        color:'#3dba6e' },
+    { label:'Trip Champion',         val:'$150',   sub:'1st place only · $37.50/player',color:'#3dba6e' },
+  ].map(c=>`<div class="tc" style="border-top:3px solid ${c.color};"><div class="tc-label" style="color:${c.color}">${c.label}</div><div class="tc-score" style="color:${c.color};font-size:28px;">${c.val}</div><div class="tc-detail">${c.sub}</div></div>`).join('');
+
+  // ── Daily Round Winners ──
+  document.getElementById('round-payouts').innerHTML = COURSES.map((c,ri)=>{
+    const dets = teams.map((t,ti)=>({ team:t, ti, det:roundScoreDetail(ti,ri) }));
+    const played = dets.filter(d=>d.det);
+    if(!played.length) return `<div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--card2);color:var(--muted);padding:2px 7px;border-radius:3px;">R${ri+1}</span>
+      <span style="font-size:14px;color:var(--white);">${c.name}</span>
+      <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);">Not played yet · $${ROUND_PAYOUT} up for grabs</span>
+    </div>`;
     played.sort((a,b)=>(a.det.net-a.det.parPlayed)-(b.det.net-b.det.parPlayed));
     const w=played[0], d=w.det.net-w.det.parPlayed, cv=TEAM_COLOR_VARS[w.ti];
     const dStr=d<0?String(d):d>0?'+'+d:'E';
     const thru=w.det.thru<w.det.holes?` · F${w.det.thru}`:'';
-    return `<div style="padding:11px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;"><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--blue);color:var(--white);padding:2px 7px;border-radius:3px;">R${ri+1}</span><span style="font-size:14px;color:var(--white);">${c.name}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">${ROUND_DAYS[ri]}${thru}</span><span style="margin-left:auto;display:flex;align-items:center;gap:10px;"><span style="font-weight:600;color:${cv}">${w.team.name}</span><span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:${d<0?'#3dba6e':d>0?'#e05c5c':'var(--muted)'}">${dStr}</span><span style="font-family:'IBM Plex Mono',monospace;color:#3dba6e;font-weight:700;">+$${ROUND_PAYOUT}</span></span></div>`;
+    const perPlayer=(ROUND_PAYOUT/4).toFixed(2);
+    return `<div style="padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;background:var(--blue);color:var(--white);padding:2px 7px;border-radius:3px;">R${ri+1}</span>
+      <span style="font-size:14px;color:var(--white);">${c.name}</span>
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">${ROUND_DAYS[ri]}${thru}</span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+        <span style="font-weight:600;color:${cv}">${w.team.name}</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;color:${d<0?'#3dba6e':d>0?'#e05c5c':'var(--muted)'}">${dStr}</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:#3dba6e;">+$${ROUND_PAYOUT}</span>
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);">($${perPlayer}/player)</span>
+      </span>
+    </div>`;
   }).join('');
 
-  // Trip standings
-  const standings=buildStandings();
-  document.getElementById('trip-money-body').innerHTML=standings.map((s,i)=>{
+  // ── Trip Standings ──
+  const standings = buildStandings();
+  document.getElementById('trip-money-body').innerHTML = standings.map((s,i)=>{
     const pd=s.details.filter(d=>d);
     const tn=pd.reduce((a,d)=>a+d.net,0), tp=pd.reduce((a,d)=>a+d.parPlayed,0);
     const diff=pd.length?tn-tp:null;
     const dStr=diff===null?'—':diff<0?String(diff):diff>0?'+'+diff:'E';
     const dColor=diff===null?'var(--muted)':diff<0?'#3dba6e':diff>0?'#e05c5c':'var(--muted)';
     const payout=TRIP_PAYOUTS[i]||0;
-    return `<tr><td><span class="rank-badge ${i<3?'rank-'+(i+1):''}">${i+1}</span></td><td class="l" style="font-weight:600;color:${TEAM_COLOR_VARS[s.team.id]}">${s.team.name}</td><td style="color:var(--white);">${pd.length?tn:'—'}</td><td style="font-size:15px;font-weight:700;color:${dColor}">${dStr}</td><td style="color:var(--muted);">${pd.length}</td><td style="color:${payout?'#3dba6e':'var(--muted)'};font-weight:700;">${payout?'$'+payout:'—'}</td></tr>`;
+    const perPlayer=payout?'$'+(payout/4)+'/player':'—';
+    return `<tr>
+      <td><span class="rank-badge ${i<3?'rank-'+(i+1):''}">${i+1}</span></td>
+      <td class="l" style="font-weight:600;color:${TEAM_COLOR_VARS[s.team.id]}">${s.team.name}</td>
+      <td style="font-size:15px;font-weight:700;color:${dColor}">${dStr}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;color:var(--white);">${pd.length?tn:'—'}</td>
+      <td style="color:var(--muted);">${pd.length}</td>
+      <td style="color:${payout?'#3dba6e':'var(--muted)'};font-weight:700;">${payout?'$'+payout:'—'}</td>
+      <td style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);">${perPlayer}</td>
+    </tr>`;
   }).join('');
 
-  // CTP
+  // ── CTP Tracker ──
   const ctpRows=[];
   Object.entries(CTP_HOLES).forEach(([riStr,holes])=>{
     const ri=parseInt(riStr), c=COURSES[ri];
     holes.forEach(h=>{
       const key=`${ri}_${h}`, w=ctpWinners[key];
-      ctpRows.push(`<tr><td class="l" style="color:var(--white);">${c.name}</td><td>Hole ${h}</td><td class="l"><span style="color:${w?'var(--white)':'var(--muted)'};">${w?pname(w.pid):'—'}</span><button onclick="openCTP(${ri},${h})" style="margin-left:8px;font-family:'IBM Plex Mono',monospace;font-size:9px;background:rgba(42,127,220,0.1);border:1px solid var(--border);color:var(--blue-light);padding:2px 7px;border-radius:3px;cursor:pointer;">Edit</button></td><td style="color:#3dba6e;font-weight:700;">${w?'$'+CTP_PAYOUT:'—'}</td><td class="l" style="color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">${w?.dist?w.dist+' ft':''}</td></tr>`);
+      ctpRows.push(`<tr>
+        <td class="l" style="color:var(--white);">${c.name}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;">Hole ${h}</td>
+        <td class="l">
+          <span style="color:${w?'var(--white)':'var(--muted)'};">${w?pname(w.pid):'—'}</span>
+          <button onclick="openCTP(${ri},${h})" style="margin-left:8px;font-family:'IBM Plex Mono',monospace;font-size:9px;background:rgba(42,127,220,0.1);border:1px solid var(--border);color:var(--blue-light);padding:2px 7px;border-radius:3px;cursor:pointer;">Edit</button>
+        </td>
+        <td style="color:#3dba6e;font-weight:700;">${w?'$'+CTP_PAYOUT:'—'}</td>
+        <td class="l" style="color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">${w?.dist?w.dist+' ft':''}</td>
+      </tr>`);
     });
   });
   document.getElementById('ctp-body').innerHTML=ctpRows.join('');
 
-  // Individual
-  const indTrip=players.map((_,pid)=>{
-    const dets=COURSES.map((_,ri)=>playerRoundDetail(pid,ri)).filter(d=>d);
-    const n=dets.reduce((a,d)=>a+d.net,0), p=dets.reduce((a,d)=>a+d.parPlayed,0);
-    return {pid,net:n,diff:dets.length?n-p:9999,rounds:dets.length};
-  }).filter(p=>p.rounds>0).sort((a,b)=>a.diff-b.diff);
-
-  const indRound=[];
-  players.forEach((_,pid)=>COURSES.forEach((_,ri)=>{
-    const det=playerRoundDetail(pid,ri);
-    if(det) indRound.push({pid,ri,net:det.net,diff:det.net-det.parPlayed});
-  }));
-  indRound.sort((a,b)=>a.diff-b.diff);
-  const br=indRound[0];
-
-  document.getElementById('ind-money-body').innerHTML=[
-    {cat:'Low Net — Full Trip', leader:indTrip.length?pname(indTrip[0].pid):'—', detail:indTrip.length?`${indTrip[0].net} net · ${indTrip[0].diff<0?indTrip[0].diff:'+'+indTrip[0].diff} over ${indTrip[0].rounds} rds`:'No scores yet', payout:'$'+IND_TRIP_PAYOUT, color:'#3dba6e'},
-    {cat:'Low Net — Single Round', leader:br?pname(br.pid):'—', detail:br?`${br.net} net · ${br.diff<0?br.diff:'+'+br.diff} · ${COURSES[br.ri].name}`:'No scores yet', payout:'$'+IND_ROUND_PAYOUT, color:'#3dba6e'},
-
-  ].map(r=>`<tr><td class="l" style="color:var(--white);font-weight:500;">${r.cat}</td><td class="l" style="color:${r.color};font-weight:600;">${r.leader}</td><td style="color:${r.color};font-weight:700;">${r.payout}</td><td class="l" style="color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;">${r.detail}</td></tr>`).join('');
+  // ── Pot Breakdown ──
+  document.getElementById('pot-breakdown-body').innerHTML = `
+    <tr><td class="l" style="color:var(--white);font-weight:500;">Skins</td><td class="l" style="color:var(--muted);">$65/round × 6</td><td style="color:var(--blue-light);">$390</td></tr>
+    <tr><td class="l" style="color:var(--white);font-weight:500;">Closest to Pin</td><td class="l" style="color:var(--muted);">$15 × 2 par 3s × 6 rounds</td><td style="color:var(--gold);">$180</td></tr>
+    <tr><td class="l" style="color:var(--white);font-weight:500;">Daily Round Winner</td><td class="l" style="color:var(--muted);">$80/round × 6 ($20/player)</td><td style="color:#3dba6e;">$480</td></tr>
+    <tr><td class="l" style="color:var(--white);font-weight:500;">Trip Champion — 1st</td><td class="l" style="color:var(--muted);">$37.50/player</td><td style="color:#3dba6e;">$150</td></tr>
+    <tr style="border-top:2px solid var(--blue);">
+      <td class="l" style="color:var(--white);font-weight:700;font-size:15px;">Total</td>
+      <td class="l"></td>
+      <td style="color:var(--white);font-family:'Bebas Neue',sans-serif;font-size:22px;">$1,200</td>
+    </tr>`;
 }
 
 function openCTP(ri,holeNum){
