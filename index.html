@@ -1484,8 +1484,13 @@ function fabSave(){
 
 // ── MONEY & CTP ──────────────────────────────────────────────
 const CTP_HOLES = {
-  0:[2,7], 1:[4,14], 2:[3,16], 3:[5,11], 4:[6,12], 5:[6,12]
-}; // 2 par 3s per round × 6 rounds
+  0:[5,17],  // Bandon Trails
+  1:[5,8],   // Old Macdonald
+  2:[3,16],  // Sheep Ranch
+  3:[10,11], // Pacific Dunes
+  4:[6,12],  // Bandon Dunes R1
+  5:[6,12],  // Bandon Dunes R2
+};
 let ctpWinners = ld('ctp',{});
 const TRIP_PAYOUTS=[150,0,0];
 const ROUND_PAYOUT=80, CTP_PAYOUT=15, SKINS_POT=65;
