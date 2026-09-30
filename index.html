@@ -400,10 +400,10 @@ body{font-family:'Inter',sans-serif;background:var(--black);color:var(--white);m
 <!-- NAV -->
 <nav class="nav">
   <div class="nav-tab active" data-page="leaderboard">Leaderboard</div>
-  <div class="nav-tab" data-page="teams">Teams</div>
-  <div class="nav-tab" data-page="schedule">Schedule</div>
   <div class="nav-tab" data-page="scores">Scores</div>
   <div class="nav-tab" data-page="skins">Skins</div>
+  <div class="nav-tab" data-page="teams">Teams</div>
+  <div class="nav-tab" data-page="schedule">Schedule</div>
   <div class="nav-tab" data-page="money">Money</div>
   <div class="nav-tab" data-page="setup">Setup</div>
 </nav>
@@ -1300,6 +1300,33 @@ function renderScoreTable(){
         <td id="net-${ri}-${pid}" style="color:var(--gold);">${net}</td>
       </tr>`;
     });
+
+    // BB Net row — always shown right below team players
+    const bgRgb = ti===0?'42,127,220':ti===1?'224,92,92':'42,191,138';
+    const bbNetCells = Array.from({length:c.holes},(_,h)=>{
+      let best = null;
+      t.players.forEach(pid=>{
+        const sc = scores[ri]?.[pid];
+        if(!sc||sc[h]==null) return;
+        const n = netScore(sc[h], phdcp(pid), h, ri);
+        if(best===null||n<best) best=n;
+      });
+      const par = c.holePar?c.holePar[h]:4;
+      const diff = best!==null?best-par:null;
+      const col = diff===null?'#2a3a2a':diff<0?'#5aaa6a':diff>0?'#c06060':'#8a9e8a';
+      return `<td style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:${col};background:rgba(${bgRgb},0.08);border-top:2px solid rgba(${bgRgb},0.3);">${best!==null?best:'–'}</td>`;
+    }).join('');
+    const bbd = roundScoreDetail(ti,ri);
+    const bbTotal = bbd?bbd.net:'–';
+    const bbDiff = bbd?bbd.net-bbd.parPlayed:null;
+    const bbDs = bbDiff===null?'':bbDiff<0?bbDiff:bbDiff>0?'+'+bbDiff:'E';
+    const bbDc = bbDiff===null?cv:bbDiff<0?'#5aaa6a':bbDiff>0?'#c06060':'#8a9e8a';
+    rows += `<tr>
+      <th style="color:${cv};font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:rgba(${bgRgb},0.1);border-top:2px solid rgba(${bgRgb},0.3);padding:7px 12px;">BB Net</th>
+      ${bbNetCells}
+      <td style="background:rgba(${bgRgb},0.1);border-top:2px solid rgba(${bgRgb},0.3);"></td>
+      <td id="bb-net-${ri}-${ti}" style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:${cv};background:rgba(${bgRgb},0.1);border-top:2px solid rgba(${bgRgb},0.3);">${bbTotal}${bbDiff!==null?` <span style="font-size:10px;color:${bbDc};">${bbDs}</span>`:''}</td>
+    </tr>`;
   });
 
   // BB + points summary
