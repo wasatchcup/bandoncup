@@ -1296,8 +1296,8 @@ function renderScoreTable(){
       rows += `<tr>
         <th style="color:var(--fog);font-weight:500;">${pname(pid)}<span style="color:var(--muted);font-weight:400;font-size:10px;"> (${phdcp(pid)})</span></th>
         ${cells}
-        <td id="gross-${ri}-${pid}" style="color:var(--fog);font-weight:600;">${gross}</td>
-        <td id="net-${ri}-${pid}" style="color:var(--gold);">${net}</td>
+        <td id="gross-${ri}-${pid}" style="color:var(--fog);font-weight:700;font-size:13px;text-align:center;min-width:44px;border-left:1px solid rgba(255,255,255,0.08);">${gross||'–'}</td>
+        <td id="net-${ri}-${pid}" style="color:var(--gold);font-weight:700;font-size:13px;text-align:center;min-width:44px;">${net||'–'}</td>
       </tr>`;
     });
 
@@ -1324,8 +1324,8 @@ function renderScoreTable(){
     rows += `<tr>
       <th style="color:${cv};font-size:11px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;background:rgba(${bgRgb},0.1);border-top:2px solid rgba(${bgRgb},0.3);padding:7px 12px;">BB Net</th>
       ${bbNetCells}
-      <td style="background:rgba(${bgRgb},0.1);border-top:2px solid rgba(${bgRgb},0.3);"></td>
-      <td id="bb-net-${ri}-${ti}" style="font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:700;color:${cv};background:rgba(${bgRgb},0.1);border-top:2px solid rgba(${bgRgb},0.3);">${bbTotal}${bbDiff!==null?` <span style="font-size:10px;color:${bbDc};">${bbDs}</span>`:''}</td>
+      <td style="background:rgba(${bgRgb},0.1);border-top:2px solid rgba(${bgRgb},0.3);border-left:1px solid rgba(255,255,255,0.08);"></td>
+      <td id="bb-net-${ri}-${ti}" style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:700;color:${cv};background:rgba(${bgRgb},0.1);border-top:2px solid rgba(${bgRgb},0.3);text-align:center;min-width:44px;">${bbTotal}${bbDiff!==null?`<br><span style="font-size:10px;color:${bbDc};">${bbDs}</span>`:''}</td>
     </tr>`;
   });
 
@@ -1353,7 +1353,7 @@ function renderScoreTable(){
     </div>
     <div style="overflow-x:auto;border:1px solid var(--border);border-radius:3px;margin-bottom:16px;">
       <table class="hole-tbl">
-        <thead><tr><th style="text-align:left;padding-left:10px;">Player</th>${hCols}<th>Gross</th><th>Net</th></tr></thead>
+        <thead><tr><th style="text-align:left;padding-left:10px;">Player</th>${hCols}<th style="min-width:44px;">Gross</th><th style="min-width:44px;">Net</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>
@@ -1390,12 +1390,11 @@ function renderScoreTable(){
 
 function refreshRowTotals(ri,pid){
   const sc = scores[ri]?.[pid]||[];
-  const c  = COURSES[ri];
   const gross = sc.filter(Boolean).reduce((a,v)=>a+v,0);
   let netTotal = 0, hasAny=false;
   sc.forEach((v,h)=>{ if(v){ netTotal+=netScore(v,phdcp(pid),h,ri); hasAny=true; } });
-  const ge=document.getElementById(`gross-${ri}-${pid}`); if(ge) ge.textContent=gross||'';
-  const ne=document.getElementById(`net-${ri}-${pid}`);   if(ne) ne.textContent=hasAny?netTotal:'';
+  const ge=document.getElementById(`gross-${ri}-${pid}`); if(ge) ge.textContent=gross||'–';
+  const ne=document.getElementById(`net-${ri}-${pid}`);   if(ne) ne.textContent=hasAny?netTotal:'–';
 }
 
 function refreshBBRow(ri){
