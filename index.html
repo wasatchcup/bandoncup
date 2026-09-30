@@ -1314,7 +1314,7 @@ function renderScoreTable(){
       const par = c.holePar?c.holePar[h]:4;
       const diff = best!==null?best-par:null;
       const col = diff===null?'#2a3a2a':diff<0?'#5aaa6a':diff>0?'#c06060':'#8a9e8a';
-      return `<td style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:${col};background:rgba(${bgRgb},0.08);border-top:2px solid rgba(${bgRgb},0.3);">${best!==null?best:'–'}</td>`;
+      return `<td id="bbc-${ri}-${ti}-${h}" style="font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:700;color:${col};background:rgba(${bgRgb},0.08);border-top:2px solid rgba(${bgRgb},0.3);">${best!==null?best:'–'}</td>`;
     }).join('');
     const bbd = roundScoreDetail(ti,ri);
     const bbTotal = bbd?bbd.net:'–';
@@ -1398,22 +1398,47 @@ function refreshRowTotals(ri,pid){
 }
 
 function refreshBBRow(ri){
+  const c = COURSES[ri];
   teams.forEach((t,ti)=>{
     const det = roundScoreDetail(ti,ri);
     const d   = det ? det.net-det.parPlayed : null;
     const cv  = TEAM_COLOR_VARS[ti];
-    // Update bb bar
-    const el  = document.getElementById(`bb-${ri}-${ti}`); if(el) el.textContent = det ? det.net : '—';
+    const bgRgb = ti===0?'42,127,220':ti===1?'224,92,92':'42,191,138';
+
+    // Update bb bar (bottom summary)
+    const el = document.getElementById(`bb-${ri}-${ti}`);
+    if(el) el.textContent = det ? det.net : '—';
     const diffEl = document.getElementById(`bb-diff-${ri}-${ti}`);
     const thruEl = document.getElementById(`bb-thru-${ri}-${ti}`);
     if(diffEl){ diffEl.textContent = d===null?'':d<0?String(d):d>0?'+'+d:'E'; diffEl.style.color = d===null?'':d<0?'#5aaa6a':d>0?'#c06060':'#8a9e8a'; }
     if(thruEl) thruEl.textContent = det&&det.thru<det.holes?` · F${det.thru}`:'';
-    // Update inline BB Net row in table
+
+    // Update each hole cell in BB Net row
+    Array.from({length:c.holes},(_,h)=>{
+      let best = null;
+      t.players.forEach(pid=>{
+        const sc = scores[ri]?.[pid];
+        if(!sc||sc[h]==null) return;
+        const n = netScore(sc[h], phdcp(pid), h, ri);
+        if(best===null||n<best) best=n;
+      });
+      const par = c.holePar?c.holePar[h]:4;
+      const diff = best!==null?best-par:null;
+      const col = diff===null?'#2a3a2a':diff<0?'#5aaa6a':diff>0?'#c06060':'#8a9e8a';
+      const cell = document.getElementById(`bbc-${ri}-${ti}-${h}`);
+      if(cell){
+        cell.textContent = best!==null?best:'–';
+        cell.style.color = col;
+        cell.style.background = `rgba(${bgRgb},${best!==null?'0.12':'0.05'})`;
+      }
+    });
+
+    // Update BB Net total cell
     const bbNetEl = document.getElementById(`bb-net-${ri}-${ti}`);
     if(bbNetEl){
       const dStr = d===null?'':d<0?String(d):d>0?'+'+d:'E';
       const dCol = d===null?'var(--muted)':d<0?'#5aaa6a':d>0?'#c06060':'#8a9e8a';
-      bbNetEl.innerHTML = det ? `${det.net}<span style="font-size:10px;color:${dCol};margin-left:4px;">${dStr}</span>` : '—';
+      bbNetEl.innerHTML = det ? `${det.net}<br><span style="font-size:10px;color:${dCol};">${dStr}</span>` : '–';
       bbNetEl.style.color = cv;
     }
   });
