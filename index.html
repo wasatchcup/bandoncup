@@ -1375,15 +1375,21 @@ function refreshBBRow(ri){
   teams.forEach((t,ti)=>{
     const det = roundScoreDetail(ti,ri);
     const d   = det ? det.net-det.parPlayed : null;
-    const el  = document.getElementById(`bb-${ri}-${ti}`); if(!el) return;
-    el.textContent = det ? det.net : '—';
-    const diffEl  = document.getElementById(`bb-diff-${ri}-${ti}`);
-    const thruEl  = document.getElementById(`bb-thru-${ri}-${ti}`);
-    if(diffEl){
-      diffEl.textContent = d===null?'':d<0?String(d):d>0?'+'+d:'E';
-      diffEl.style.color = d===null?'':d<0?'#5aaa6a':d>0?'#c06060':'#8a9e8a';
-    }
+    const cv  = TEAM_COLOR_VARS[ti];
+    // Update bb bar
+    const el  = document.getElementById(`bb-${ri}-${ti}`); if(el) el.textContent = det ? det.net : '—';
+    const diffEl = document.getElementById(`bb-diff-${ri}-${ti}`);
+    const thruEl = document.getElementById(`bb-thru-${ri}-${ti}`);
+    if(diffEl){ diffEl.textContent = d===null?'':d<0?String(d):d>0?'+'+d:'E'; diffEl.style.color = d===null?'':d<0?'#5aaa6a':d>0?'#c06060':'#8a9e8a'; }
     if(thruEl) thruEl.textContent = det&&det.thru<det.holes?` · F${det.thru}`:'';
+    // Update inline BB Net row in table
+    const bbNetEl = document.getElementById(`bb-net-${ri}-${ti}`);
+    if(bbNetEl){
+      const dStr = d===null?'':d<0?String(d):d>0?'+'+d:'E';
+      const dCol = d===null?'var(--muted)':d<0?'#5aaa6a':d>0?'#c06060':'#8a9e8a';
+      bbNetEl.innerHTML = det ? `${det.net}<span style="font-size:10px;color:${dCol};margin-left:4px;">${dStr}</span>` : '—';
+      bbNetEl.style.color = cv;
+    }
   });
 }
 
